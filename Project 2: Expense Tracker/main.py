@@ -27,7 +27,7 @@ class Expense:
                 self.name = expense_name
                 self.category = expense_category
         def display(self):
-                print(f"  {self.date.strftime('%Y-%m-%d')}  │  {self.name:<20}  │  ${self.amount:>8.2f}  │  {self.category}")
+                print(f"  {self.date.strftime('%Y-%m-%d')}  │  {self.name:<18}  │  ${self.amount:>9.2f}  │  {self.category:<12}")
 
 class ExpenseManager:
         def __init__(self):
@@ -68,15 +68,15 @@ class ExpenseManager:
                 month_num = datetime.datetime.strptime(month_name, "%B").month  # 3
 
                 # Step 6: Filter and show
-                print(f"\n  {'Date':<12}  │  {'Name':<20}  │  {'Amount':>10}  │  {'Category':<15}")
-                print("  " + "─" * 70)
+                print(f"\n  {'Date':<10}  │  {'Name':<18}  │  {'Amount':>10}  │  {'Category':<12}")
+                print("  " + "─" * 74)
                 total = 0
                 for expense in self.expenses:
                         if expense.date.month == month_num and expense.date.year == int(year):
                                 expense.display()
                                 total += expense.amount
-                print("  " + "─" * 70)
-                print(f"  {'TOTAL':<35}  │  ${total:>8.2f}")
+                print("  " + "─" * 74)
+                print(f"  {'TOTAL':<31}  │  ${total:>9.2f}")
 
         def view_expenses_category(self):
                 # Step 1: Get unique categories
@@ -96,15 +96,15 @@ class ExpenseManager:
                 selected = categories[choice]
 
                 # Step 4: Filter and show
-                print(f"\n  {'Date':<12}  │  {'Name':<20}  │  {'Amount':>10}  │  {'Category':<15}")
-                print("  " + "─" * 70)
+                print(f"\n  {'Date':<10}  │  {'Name':<18}  │  {'Amount':>10}  │  {'Category':<12}")
+                print("  " + "─" * 74)
                 total = 0
                 for expense in self.expenses:
                         if expense.category == selected:
                                 expense.display()
                                 total += expense.amount
-                print("  " + "─" * 70)
-                print(f"  {'TOTAL':<35}  │  ${total:>8.2f}")
+                print("  " + "─" * 74)
+                print(f"  {'TOTAL':<31}  │  ${total:>9.2f}")
         def save_to_file(self, filename="report.csv"):
                 with open(filename, "w", newline="") as file:
                         writer = csv.writer(file)
