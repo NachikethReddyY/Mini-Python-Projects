@@ -10,3 +10,5 @@ import time
 import winsound
 import os
 
+input()
+
