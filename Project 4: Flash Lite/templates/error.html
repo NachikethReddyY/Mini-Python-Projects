@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+
+{% block head %}
+<title>Error - Flash Card Generator</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+{% endblock %}
+
+{% block body %}
+<div class="error-container">
+    <div class="error-icon">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+        </svg>
+    </div>
+
+    <h1 class="error-code">{{ error_code | default('404') }}</h1>
+    <h2 class="error-title">{{ error_title | default('Page Not Found') }}</h2>
+    <p class="error-message">
+        {{ error_message | default('Sorry, we couldn\'t find the page you\'re looking for. It might have been moved or deleted.') }}
+    </p>
+
+    <div class="error-actions">
+        <a href="/" class="btn btn-primary">Go Home</a>
+        <a href="javascript:history.back()" class="btn btn-outline">Go Back</a>
+    </div>
+</div>
+
+<script>
+    gsap.registerPlugin();
+
+    // Animate error icon
+    gsap.from('.error-icon', {
+        scale: 0,
+        rotation: -180,
+        duration: 0.6,
+        ease: 'back.out(1.7)'
+    });
+
+    // Animate error code
+    gsap.from('.error-code', {
+        y: -30,
+        opacity: 0,
+        duration: 0.5,
+        delay: 0.2,
+        ease: 'power2.out'
+    });
+
+    // Animate title
+    gsap.from('.error-title', {
+        y: 20,
+        opacity: 0,
+        duration: 0.5,
+        delay: 0.35,
+        ease: 'power2.out'
+    });
+
+    // Animate message
+    gsap.from('.error-message', {
+        y: 20,
+        opacity: 0,
+        duration: 0.5,
+        delay: 0.45,
+        ease: 'power2.out'
+    });
+
+    // Animate buttons
+    gsap.from('.error-actions .btn', {
+        y: 20,
+        opacity: 0,
+        duration: 0.4,
+        stagger: 0.1,
+        delay: 0.55,
+        ease: 'power2.out'
+    });
+
+    // Pulse animation on icon
+    gsap.to('.error-icon', {
+        boxShadow: '0 12px 50px rgba(26, 115, 232, 0.35)',
+        duration: 1.5,
+        yoyo: true,
+        repeat: -1,
+        ease: 'sine.inOut'
+    });
+</script>
+{% endblock %}

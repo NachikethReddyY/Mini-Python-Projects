@@ -1,0 +1,81 @@
+{% extends 'base.html' %}
+
+{% block head %}
+<title>Flash Card Generator</title>
+{% endblock %}
+
+{% block body %}
+<div class="container">
+    <h1>Flash Card Generator</h1>
+    <p class="subtitle">Transform your content into study cards</p>
+
+    <form id="flashcard-form" method="POST" action="/generate">
+        <div class="input-wrapper">
+            <textarea
+                id="content-textarea"
+                name="content"
+                placeholder="Paste your study material here..."
+                required
+            ></textarea>
+            <button type="submit" class="send-button" id="send-btn" aria-label="Generate flashcards" title="Send">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M4 12l1.41 1.41L11 7.83V20h2V7.83l5.59 5.58L20 12l-8-8-8 8z"/>
+                </svg>
+            </button>
+        </div>
+    </form>
+
+    <p class="footer-note"><span class="keyboard-shortcut">Shift + Enter</span> for new line · <span class="keyboard-shortcut">Enter</span> to send</p>
+</div>
+
+<script>
+    const textarea = document.getElementById('content-textarea');
+    const MIN_HEIGHT = 48;
+    const MAX_HEIGHT = 200;
+    let resizeTimeout;
+
+    function adjustHeight() {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(() => {
+            const savedValue = textarea.value;
+            textarea.style.height = 'auto';
+            let newHeight = Math.min(Math.max(textarea.scrollHeight, MIN_HEIGHT), MAX_HEIGHT);
+            textarea.style.height = newHeight + 'px';
+        }, 10);
+    }
+
+    textarea.addEventListener('input', adjustHeight);
+    adjustHeight();
+
+    const form = document.getElementById('flashcard-form');
+    const sendBtn = document.getElementById('send-btn');
+
+    // Handle Enter vs Shift+Enter
+    textarea.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            if (!e.shiftKey) {
+                // Enter without Shift = submit form
+                e.preventDefault();
+                if (textarea.value.trim() !== '') {
+                    // Using requestSubmit() instead of submit() triggers the submit event listener
+                    form.requestSubmit();
+                }
+            }
+            // Shift+Enter = new line (default behavior)
+        }
+    });
+
+    form.addEventListener('submit', function(e) {
+        if (textarea.value.trim() === '') {
+            e.preventDefault();
+            textarea.focus();
+            return;
+        }
+        // Save to sessionStorage for the loading page to pick up
+        const content = textarea.value.trim();
+        sessionStorage.setItem('study_content', content);
+        console.log("Saving content to sessionStorage:", content.substring(0, 20) + "...");
+        sendBtn.disabled = true;
+    });
+</script>
+{% endblock %}

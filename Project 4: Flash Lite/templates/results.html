@@ -1,0 +1,362 @@
+{% extends 'base.html' %}
+
+{% block head %}
+<title>Your Flashcards</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+{% endblock %}
+
+{% block body %}
+<div class="results-container">
+    <div class="header">
+        <div class="progress-info">
+            <span id="card-counter">1 / 5</span>
+        </div>
+        <h1>Study Mode</h1>
+    </div>
+
+    <div class="flashcard-wrapper">
+        <div class="flashcard-large" id="flashcard">
+            <div class="flashcard-inner" id="flashcard-inner">
+                <div class="flashcard-front">
+                    <p class="card-label">Question</p>
+                    <p class="card-content" id="question-text">What is the capital of France?</p>
+                </div>
+                <div class="flashcard-back">
+                    <p class="card-label">Answer</p>
+                    <p class="card-content" id="answer-text">Paris</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="flip-button-wrapper">
+            <button class="flip-btn" id="flip-btn">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 4.81V2m0 19.19V22m-7.07-2.93l1.41-1.41M17.66 5.34l1.41-1.41M4.81 12H2m19.19 0H22m-2.93-7.07l-1.41 1.41M6.34 17.66l-1.41 1.41M12 7a5 5 0 100 10 5 5 0 000-10z"/>
+                </svg>
+                Flip Card
+            </button>
+        </div>
+    </div>
+
+    <div class="navigation-controls">
+        <button class="nav-btn" id="prev-btn" disabled>
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
+            </svg>
+            Previous
+        </button>
+
+        <div class="confidence-section" id="confidence-section" style="display: none;">
+            <span class="confidence-label">How did you do?</span>
+            <div class="confidence-buttons">
+                <button class="confidence-btn knew-it" id="knew-it-btn">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                    Knew it
+                </button>
+                <button class="confidence-btn review" id="review-btn">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+                    Review
+                </button>
+            </div>
+        </div>
+
+        <button class="nav-btn" id="next-btn">
+            Next
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/>
+            </svg>
+        </button>
+    </div>
+
+    <div class="stats-bar">
+        <div class="stat">
+            <span class="stat-value" id="known-count">0</span>
+            <span class="stat-label">Known</span>
+        </div>
+        <div class="stat">
+            <span class="stat-value" id="review-count">0</span>
+            <span class="stat-label">To Review</span>
+        </div>
+        <div class="stat">
+            <span class="stat-value" id="progress-percent">0%</span>
+            <span class="stat-label">Progress</span>
+        </div>
+    </div>
+
+    <div class="action-buttons">
+        <button class="btn btn-primary" id="save-btn">Save Session</button>
+    </div>
+</div>
+
+<script>
+    // Flashcards data (empty array - will be populated from backend)
+    const flashcardsData = [];
+
+    async function fetchCards() {
+        try {
+            const response = await fetch('/api/cards');
+            const data = await response.json();
+            flashcardsData.length = 0;
+            flashcardsData.push(...data);
+            init();
+        } catch (error) {
+            console.error('Error fetching cards:', error);
+            init(); // still init to show 'no cards' state if needed
+        }
+    }
+
+    let currentIndex = 0;
+    let isFlipped = false;
+    const knownCards = new Set();
+    const reviewCards = new Set();
+
+    const flashcard = document.getElementById('flashcard');
+    const flashcardInner = document.getElementById('flashcard-inner');
+    const flipBtn = document.getElementById('flip-btn');
+    const prevBtn = document.getElementById('prev-btn');
+    const nextBtn = document.getElementById('next-btn');
+    const cardCounter = document.getElementById('card-counter');
+    const questionText = document.getElementById('question-text');
+    const answerText = document.getElementById('answer-text');
+    const confidenceSection = document.getElementById('confidence-section');
+    const knewItBtn = document.getElementById('knew-it-btn');
+    const reviewBtn = document.getElementById('review-btn');
+
+    // Initialize with placeholder
+    function init() {
+        gsap.from('.header', {
+            y: -20,
+            opacity: 0,
+            duration: 0.5,
+            ease: 'power2.out'
+        });
+
+        gsap.from('.flashcard-wrapper', {
+            scale: 0.9,
+            opacity: 0,
+            duration: 0.6,
+            delay: 0.2,
+            ease: 'back.out(1.4)'
+        });
+
+        gsap.from('.navigation-controls', {
+            y: 20,
+            opacity: 0,
+            duration: 0.5,
+            delay: 0.4,
+            ease: 'power2.out'
+        });
+
+        updateUI();
+    }
+
+    function updateUI() {
+        if (flashcardsData.length === 0) {
+            questionText.textContent = 'No cards generated yet';
+            answerText.textContent = 'Paste content and try again';
+            cardCounter.textContent = '0 / 0';
+            prevBtn.disabled = true;
+            nextBtn.disabled = true;
+            flipBtn.disabled = true;
+            return;
+        }
+
+        const card = flashcardsData[currentIndex];
+        questionText.textContent = card.question;
+        answerText.textContent = card.answer;
+        cardCounter.textContent = `${currentIndex + 1} / ${flashcardsData.length}`;
+
+        prevBtn.disabled = currentIndex === 0;
+        
+        // Transform Next button to Finish button on last card
+        if (currentIndex === flashcardsData.length - 1) {
+            nextBtn.innerHTML = 'Finish <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>';
+            nextBtn.classList.add('finish-btn');
+        } else {
+            nextBtn.innerHTML = 'Next <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>';
+            nextBtn.classList.remove('finish-btn');
+        }
+
+        // Always reset flip state when moving to a new card
+        if (isFlipped) {
+            gsap.set(flashcardInner, { rotationY: 0 });
+            isFlipped = false;
+        }
+        
+        // Hide confidence section until card is flipped
+        confidenceSection.style.display = 'none';
+        confidenceSection.style.opacity = '0';
+
+        updateConfidenceUI();
+    }
+
+    function flipCard() {
+        if (flashcardsData.length === 0) return;
+
+        isFlipped = !isFlipped;
+        gsap.to(flashcardInner, {
+            rotationY: isFlipped ? 180 : 0,
+            duration: 0.5,
+            ease: 'power2.inOut',
+            onComplete: () => {
+                if (isFlipped) {
+                    confidenceSection.style.display = 'flex';
+                    gsap.to(confidenceSection, { opacity: 1, y: 0, duration: 0.3 });
+                } else {
+                    confidenceSection.style.display = 'none';
+                }
+            }
+        });
+    }
+
+    function navigate(direction) {
+        if (direction === 'next' && currentIndex === flashcardsData.length - 1) {
+            finishSession();
+            return;
+        }
+
+        if (direction === 'prev' && currentIndex > 0) {
+            currentIndex--;
+        } else if (direction === 'next' && currentIndex < flashcardsData.length - 1) {
+            currentIndex++;
+        }
+
+        // Animate card out
+        gsap.to(flashcard, {
+            x: direction === 'next' ? -50 : 50,
+            opacity: 0,
+            duration: 0.2,
+            onComplete: () => {
+                updateUI();
+                gsap.fromTo(flashcard,
+                    { x: direction === 'next' ? 50 : -50, opacity: 0 },
+                    { x: 0, opacity: 1, duration: 0.3, ease: 'power2.out' }
+                );
+            }
+        });
+    }
+
+    function finishSession() {
+        // Final "Done" animation
+        const tl = gsap.timeline();
+        tl.to('.results-container', {
+            scale: 0.8,
+            opacity: 0,
+            duration: 0.5,
+            ease: 'back.in(1.7)'
+        })
+        .to('body', {
+            backgroundColor: '#ffffff',
+            duration: 0.3
+        })
+        .add(() => {
+            window.location.href = '/';
+        });
+    }
+
+    function updateConfidenceUI() {
+        knewItBtn.classList.remove('selected');
+        reviewBtn.classList.remove('selected');
+
+        if (knownCards.has(currentIndex)) {
+            knewItBtn.classList.add('selected');
+        } else if (reviewCards.has(currentIndex)) {
+            reviewBtn.classList.add('selected');
+        }
+
+        updateStats();
+    }
+
+    function markConfidence(type) {
+        if (type === 'known') {
+            if (knownCards.has(currentIndex)) {
+                knownCards.delete(currentIndex);
+            } else {
+                knownCards.add(currentIndex);
+                reviewCards.delete(currentIndex);
+            }
+        } else {
+            if (reviewCards.has(currentIndex)) {
+                reviewCards.delete(currentIndex);
+            } else {
+                reviewCards.add(currentIndex);
+                knownCards.delete(currentIndex);
+            }
+        }
+
+        updateConfidenceUI();
+
+        // Pulse animation
+        gsap.to(flashcard, {
+            scale: 1.02,
+            duration: 0.15,
+            yoyo: true,
+            repeat: 1,
+            ease: 'power2.inOut'
+        });
+    }
+
+    function updateStats() {
+        document.getElementById('known-count').textContent = knownCards.size;
+        document.getElementById('review-count').textContent = reviewCards.size;
+
+        const progress = flashcardsData.length > 0
+            ? Math.round(((knownCards.size + reviewCards.size) / flashcardsData.length) * 100)
+            : 0;
+        document.getElementById('progress-percent').textContent = progress + '%';
+    }
+
+    // Event Listeners
+    flipBtn.addEventListener('click', flipCard);
+    flashcard.addEventListener('click', flipCard);
+
+    prevBtn.addEventListener('click', () => navigate('prev'));
+    nextBtn.addEventListener('click', () => navigate('next'));
+
+    knewItBtn.addEventListener('click', () => markConfidence('known'));
+    reviewBtn.addEventListener('click', () => markConfidence('review'));
+
+    // Keyboard navigation
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowLeft') navigate('prev');
+        if (e.key === 'ArrowRight') navigate('next');
+        if (e.key === ' ' || e.key === 'Enter') {
+            e.preventDefault();
+            flipCard();
+        }
+    });
+
+    // Save button
+    const saveBtn = document.getElementById('save-btn');
+    saveBtn.addEventListener('click', () => {
+        gsap.to(saveBtn, {
+            scale: 0.95,
+            duration: 0.1,
+            yoyo: true,
+            repeat: 1
+        });
+
+        const notification = document.createElement('div');
+        notification.className = 'notification';
+        notification.textContent = 'Session saved!';
+        document.body.appendChild(notification);
+
+        gsap.fromTo(notification,
+            { y: -50, opacity: 0 },
+            { y: 0, opacity: 1, duration: 0.4, ease: 'back.out(1.7)' }
+        );
+
+        setTimeout(() => {
+            gsap.to(notification, {
+                y: -50,
+                opacity: 0,
+                duration: 0.3,
+                onComplete: () => notification.remove()
+            });
+        }, 2000);
+    });
+
+    // Initialize
+    fetchCards();
+</script>
+{% endblock %}

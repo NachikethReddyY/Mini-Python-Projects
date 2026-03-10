@@ -1,0 +1,131 @@
+{% extends 'base.html' %}
+
+{% block head %}
+<title>Generating Flashcards...</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+{% endblock %}
+
+{% block body %}
+<div class="loading-container">
+    <div class="loader-wrapper">
+        <div class="card-stack">
+            <div class="loading-card card-1"></div>
+            <div class="loading-card card-2"></div>
+            <div class="loading-card card-3"></div>
+        </div>
+        <div class="loading-text">
+            <span class="word">Generating</span>
+            <span class="word">your</span>
+            <span class="word">flashcards</span>
+            <span class="dots">...</span>
+        </div>
+        <div class="progress-bar">
+            <div class="progress-fill"></div>
+        </div>
+        <p class="loading-subtext">AI is analyzing your content</p>
+    </div>
+</div>
+
+<script>
+    // GSAP Animations
+    gsap.registerPlugin();
+
+    // Card stack animation
+    const tl = gsap.timeline({ repeat: -1 });
+
+    tl.fromTo('.card-1',
+        { y: 0, rotation: 0, opacity: 1 },
+        { y: -30, rotation: -5, opacity: 0.8, duration: 0.5, ease: 'power2.out' }
+    )
+    .fromTo('.card-2',
+        { y: 0, rotation: 0, opacity: 1 },
+        { y: -20, rotation: 3, opacity: 0.9, duration: 0.5, ease: 'power2.out' },
+        '-=0.3'
+    )
+    .fromTo('.card-3',
+        { y: 0, rotation: 0, opacity: 1 },
+        { y: -10, rotation: -2, opacity: 0.95, duration: 0.5, ease: 'power2.out' },
+        '-=0.3'
+    )
+    .to('.loading-card', {
+        y: 0,
+        rotation: 0,
+        opacity: 1,
+        duration: 0.6,
+        stagger: 0.1,
+        ease: 'power2.inOut'
+    })
+    .to('.loading-card', {
+        scale: 1.05,
+        duration: 0.2,
+        yoyo: true,
+        repeat: 1,
+        ease: 'power2.inOut'
+    }, '+=0.1');
+
+    // Text animation
+    gsap.from('.word', {
+        y: 20,
+        opacity: 0,
+        duration: 0.6,
+        stagger: 0.1,
+        ease: 'back.out(1.7)'
+    });
+
+    // Dots animation
+    gsap.to('.dots', {
+        opacity: 0.3,
+        duration: 0.5,
+        yoyo: true,
+        repeat: -1,
+        ease: 'power2.inOut'
+    });
+
+    // Progress bar animation
+    gsap.fromTo('.progress-fill',
+        { width: '0%' },
+        { width: '100%', duration: 8, ease: 'power1.inOut' }
+    );
+
+    // Pulse animation on cards
+    gsap.to('.loading-card', {
+        boxShadow: '0 8px 30px rgba(26, 115, 232, 0.3)',
+        duration: 1,
+        yoyo: true,
+        repeat: -1,
+        ease: 'sine.inOut'
+    });
+
+    // Auto redirect after generation is done
+    async function startGeneration() {
+        const content = sessionStorage.getItem('study_content');
+        if (!content) {
+            window.location.href = '/';
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/generate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ content: content })
+            });
+
+            const result = await response.json();
+            if (result.status === 'success') {
+                window.location.href = '/results';
+            } else {
+                window.location.href = '/error?message=' + encodeURIComponent(result.message || 'Generation failed');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            window.location.href = '/error?message=Connection to AI failed';
+        }
+    }
+
+    // Small delay to let animations start
+    setTimeout(startGeneration, 1000);
+</script>
+{% endblock %}
